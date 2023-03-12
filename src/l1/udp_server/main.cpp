@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <netdb.h>
+#include <string.h>
 
 #include <socket_wrapper/socket_headers.h>
 #include <socket_wrapper/socket_wrapper.h>
@@ -16,6 +18,12 @@ static inline std::string& rtrim(std::string& s)
     return s;
 }
 
+bool check_exit_command(char* buf)
+{
+    char exit_command[5] = "exit";
+    exit_command[4] = '\n';
+    return strncmp(exit_command, buf, 5) == 0 ? true : false;
+}
 
 int main(int argc, char const *argv[])
 {
@@ -63,6 +71,7 @@ int main(int argc, char const *argv[])
 
     std::cout << "Running echo server...\n" << std::endl;
     char client_address_buf[INET_ADDRSTRLEN];
+    char client_name_buf[NI_MAXHOST];
 
     while (true)
     {
@@ -75,7 +84,9 @@ int main(int argc, char const *argv[])
         {
             buffer[recv_len] = '\0';
             std::cout
-                << "Client with address "
+                << "Client \""
+                << ((getnameinfo(reinterpret_cast<const sockaddr*>(&client_address), client_address_len, client_name_buf, sizeof(client_name_buf), NULL, 0, 0) == 0) ? client_name_buf : "UNKNOWN")
+                << "\" with address "
                 << inet_ntop(AF_INET, &client_address.sin_addr, client_address_buf, sizeof(client_address_buf) / sizeof(client_address_buf[0]))
                 << ":" << ntohs(client_address.sin_port)
                 << " sent datagram "
@@ -85,6 +96,13 @@ int main(int argc, char const *argv[])
                 << buffer
                 << "\n'''"
                 << std::endl;
+
+            if (check_exit_command(buffer))
+            {
+                std::cout << "Exit command accept" << std::endl;
+                break;
+            }
+
             //if ("exit" == command_string) run = false;
             //send(sock, &buf, readden, 0);
 
